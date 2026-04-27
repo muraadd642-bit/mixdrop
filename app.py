@@ -55,7 +55,7 @@ def download_playlist(url, format_type, session_id):
         })
     else:
         ydl_opts.update({
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'best',
         })
 
     try:
