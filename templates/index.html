@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MixDrop — YouTube Playlist Downloader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --card: #16161f;
+      --border: #ffffff0f;
+      --red: #ff2d2d;
+      --red-dim: #ff2d2d22;
+      --white: #f0f0f0;
+      --muted: #555568;
+      --success: #00e676;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, #ff2d2d18 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 620px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 5rem;
+      letter-spacing: 4px;
+      color: var(--white);
+      line-height: 1;
+    }
+
+    .logo span {
+      color: var(--red);
+    }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 300;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      box-shadow: 0 40px 80px #00000080;
+    }
+
+    /* URL Input */
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+      font-weight: 500;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .url-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      padding: 0.9rem 1.2rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .url-input::placeholder {
+      color: var(--muted);
+    }
+
+    .url-input:focus {
+      border-color: var(--red);
+    }
+
+    /* Format Toggle */
+    .format-group {
+      margin-bottom: 2rem;
+    }
+
+    .toggle-wrap {
+      display: flex;
+      gap: 0.8rem;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .toggle-btn.active {
+      background: var(--red-dim);
+      border-color: var(--red);
+      color: var(--white);
+    }
+
+    .toggle-btn:hover:not(.active) {
+      border-color: #ffffff20;
+      color: var(--white);
+    }
+
+    /* Download Button */
+    .btn-download {
+      width: 100%;
+      background: var(--red);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 3px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-download:hover {
+      background: #ff4444;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px #ff2d2d44;
+    }
+
+    .btn-download:active {
+      transform: translateY(0);
+    }
+
+    .btn-download:disabled {
+      background: #333;
+      color: #555;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Progress Section */
+    .progress-section {
+      margin-top: 2rem;
+      display: none;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .progress-title {
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .progress-count {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      color: var(--red);
+      letter-spacing: 2px;
+    }
+
+    .progress-bar-bg {
+      background: var(--surface);
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--red);
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 10px var(--red);
+    }
+
+    .current-track {
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .current-track span {
+      color: var(--white);
+    }
+
+    /* Success state */
+    .success-box {
+      margin-top: 1.5rem;
+      background: #00e67611;
+      border: 1px solid #00e67633;
+      border-radius: 12px;
+      padding: 1.2rem;
+      display: none;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .success-box.visible {
+      display: flex;
+    }
+
+    .success-icon {
+      font-size: 1.8rem;
+    }
+
+    .success-text {
+      flex: 1;
+    }
+
+    .success-text p {
+      font-size: 0.85rem;
+      color: var(--success);
+      font-weight: 500;
+    }
+
+    .success-text small {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .btn-zip {
+      background: var(--success);
+      border: none;
+      border-radius: 8px;
+      color: #000;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-zip:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    /* Error */
+    .error-box {
+      margin-top: 1.5rem;
+      background: #ff2d2d11;
+      border: 1px solid #ff2d2d33;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      display: none;
+      font-size: 0.82rem;
+      color: #ff6b6b;
+    }
+
+    .error-box.visible {
+      display: block;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 2.5rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+    }
+
+    /* Pulse animation for active download */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 6px var(--red); }
+      50% { box-shadow: 0 0 18px var(--red); }
+    }
+
+    .progress-bar-fill.active {
+      animation: pulse-glow 1.5s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="logo">Mix<span>Drop</span></div>
+      <p class="tagline">YouTube Playlist & Mix Downloader</p>
+    </div>
+
+    <div class="card">
+      <!-- URL Input -->
+      <div class="input-group">
+        <label class="input-label">Playlist / Mix URL</label>
+        <div class="input-wrap">
+          <input
+            type="text"
+            class="url-input"
+            id="urlInput"
+            placeholder="https://youtube.com/playlist?list=..."
+          />
+        </div>
+      </div>
+
+      <!-- Format Toggle -->
+      <div class="input-group format-group">
+        <label class="input-label">Format</label>
+        <div class="toggle-wrap">
+          <button class="toggle-btn active" id="btnMp3" onclick="setFormat('mp3')">
+            🎵 MP3 — Audio
+          </button>
+          <button class="toggle-btn" id="btnMp4" onclick="setFormat('mp4')">
+            🎬 MP4 — Video
+          </button>
+        </div>
+      </div>
+
+      <!-- Download Button -->
+      <button class="btn-download" id="btnStart" onclick="startDownload()">
+        YÜKLƏ
+      </button>
+
+      <!-- Progress -->
+      <div class="progress-section" id="progressSection">
+        <div class="progress-header">
+          <span class="progress-title">Yüklənir...</span>
+          <span class="progress-count" id="progressCount">0 / 0</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill active" id="progressBar"></div>
+        </div>
+        <div class="current-track">İndi: <span id="currentTrack">—</span></div>
+      </div>
+
+      <!-- Success -->
+      <div class="success-box" id="successBox">
+        <div class="success-icon">✅</div>
+        <div class="success-text">
+          <p>Playlist hazırdır!</p>
+          <small>ZIP faylını yükləmək üçün düyməyə bas</small>
+        </div>
+        <button class="btn-zip" id="btnZip">ZIP YÜKLƏ</button>
+      </div>
+
+      <!-- Error -->
+      <div class="error-box" id="errorBox"></div>
+    </div>
+
+    <div class="footer">
+      Lokal işləyir · Heç bir data serverə göndərilmir
+    </div>
+  </div>
+
+  <script>
+    let selectedFormat = 'mp3';
+    let pollInterval = null;
+    let currentSession = null;
+
+    function setFormat(fmt) {
+      selectedFormat = fmt;
+      document.getElementById('btnMp3').classList.toggle('active', fmt === 'mp3');
+      document.getElementById('btnMp4').classList.toggle('active', fmt === 'mp4');
+    }
+
+    async function startDownload() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) {
+        showError('Zəhmət olmasa URL daxil edin.');
+        return;
+      }
+
+      // Reset UI
+      hideAll();
+      document.getElementById('btnStart').disabled = true;
+      document.getElementById('btnStart').textContent = 'BAŞLANIR...';
+      document.getElementById('progressSection').classList.add('visible');
+
+      try {
+        const res = await fetch('/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, format: selectedFormat })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          showError(data.error);
+          resetBtn();
+          return;
+        }
+
+        currentSession = data.session_id;
+        pollInterval = setInterval(pollProgress, 1500);
+      } catch (e) {
+        showError('Server ilə əlaqə qurulmadı.');
+        resetBtn();
+      }
+    }
+
+    async function pollProgress() {
+      if (!currentSession) return;
+
+      try {
+        const res = await fetch(`/progress/${currentSession}`);
+        const data = await res.json();
+
+        const current = data.current || 0;
+        const total = data.total || 0;
+        const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+
+        document.getElementById('progressCount').textContent = `${current} / ${total}`;
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('currentTrack').textContent = data.current_title || '—';
+
+        if (data.done) {
+          clearInterval(pollInterval);
+          if (data.status === 'complete') {
+            document.getElementById('progressBar').classList.remove('active');
+            document.getElementById('progressBar').style.width = '100%';
+            document.getElementById('progressCount').textContent = `${total} / ${total}`;
+            showSuccess();
+          } else if (data.error) {
+            showError('Xəta: ' + data.error);
+          }
+          resetBtn();
+        }
+      } catch (e) {
+        // silent
+      }
+    }
+
+    function showSuccess() {
+      const box = document.getElementById('successBox');
+      box.classList.add('visible');
+      document.getElementById('btnZip').onclick = () => {
+        window.location.href = `/download/${currentSession}`;
+      };
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = '⚠️ ' + msg;
+      box.classList.add('visible');
+    }
+
+    function hideAll() {
+      document.getElementById('successBox').classList.remove('visible');
+      document.getElementById('errorBox').classList.remove('visible');
+      document.getElementById('progressSection').classList.remove('visible');
+    }
+
+    function resetBtn() {
+      const btn = document.getElementById('btnStart');
+      btn.disabled = false;
+      btn.textContent = 'YÜKLƏ';
+    }
+  </script>
+</body>
+</html>
