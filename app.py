@@ -38,6 +38,7 @@ def download_playlist(url, format_type, session_id):
     ydl_opts = {
         'outtmpl': os.path.join(session_path, '%(playlist_index)s - %(title)s.%(ext)s'),
         'progress_hooks': [progress_hook],
+        'cookiefile': os.environ.get('COOKIES_PATH', 'cookies.txt'),
         'ignoreerrors': True,
         'quiet': True,
         'no_warnings': True,
